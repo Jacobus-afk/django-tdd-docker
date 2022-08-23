@@ -1,0 +1,35 @@
+# pull official base image
+FROM python:3.10.1-slim-buster
+
+# set working directory
+WORKDIR /usr/src/app
+
+# set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+ENV DEBUG 0
+ENV SECRET_KEY %yqa1dj_(orn*k1)0mn@2aco52ge_vw2@_%t%fvb8qpor8#yw+
+ENV DJANGO_ALLOWED_HOSTS .herokuapp.com
+
+# install system dependencies
+RUN apt-get update \
+  && apt-get -y install --no-install-recommends netcat gcc postgresql \
+  && apt-get clean
+
+# add and install requirements
+COPY ./requirements.txt .
+RUN pip install --upgrade pip \
+    && pip install -r requirements.txt
+
+# add app
+COPY . .
+
+# collect static files
+RUN python manage.py collectstatic --noinput
+
+# add and run as non-root user
+RUN adduser --disabled-password myuser
+USER myuser
+
+# run gunicorn
+CMD gunicorn drf_project.wsgi:application --bind 0.0.0.0:$PORT
